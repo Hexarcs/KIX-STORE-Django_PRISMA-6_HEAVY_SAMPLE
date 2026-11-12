@@ -1,0 +1,106 @@
+{% load static %}{% load socialaccount %}<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <link rel="icon" type="image/png" href="{% static 'img/favicon_cart_kix.png' %}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supermercado Itatingax - Economia Real no Ecossistema</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+    <script>
+        window.csrfToken = "{{ csrf_token }}";
+    </script>
+    <script src="{% static 'js/script.js' %}" defer></script>
+</head>
+<body>
+
+    <button class="theme-toggle-btn" id="theme-toggle" title="Alternar Tema">☀️</button>
+
+    <header>
+        <div class="logo-container">
+            <div class="logo">🛒 Supermercado --Itatingax--</div>
+            <span class="kix-badge">Membro do Ecossistema KIX</span>
+        </div>
+
+        <div class="cart-status-widget">
+            <span>🛒 <strong id="cart-counter">0</strong> itens</span>
+            <span class="sats-counter">⚡ <span id="cart-total-sats">0</span> Sats</span>
+            <button id="btn-clear-cart" class="btn-remove" style="display: none; padding: 5px 10px; border-radius: 4px; font-size: 12px; border: none; cursor: pointer;">🗑️ Limpar</button>
+            <button id="btn-pay" class="btn-pay" style="display: none;">Pagar</button>
+        </div>
+
+        <div class="auth-box">
+            {% if user.is_authenticated %}
+                <div class="user-logged" style="display: flex; align-items: center; gap: 10px;">
+                    <span>Olá, <strong>{{ user.email }}</strong></span>
+                    
+                    <a href="{% url 'editar_perfil' %}" 
+                       style="background: transparent; border: 1px solid #f7931a; color: #f7931a; padding: 4px 10px; border-radius: 4px; font-size: 12px; text-decoration: none; transition: 0.3s;">
+                       Editar Endereço
+                    </a>
+
+                    <a href="{% url 'account_logout' %}" class="btn-logout">Sair</a>
+                </div>
+            {% else %}
+                <a href="{% provider_login_url 'google' %}" class="btn-auth">Entrar com o Google</a>
+            {% endif %}
+        </div>
+    </header>
+
+    <div class="banner">
+        <h2>⚡ Pagamento Nativo em Satoshis</h2>
+        <p>Logística integrada ao <strong>Ecossistema KIX</strong>. Economia real direto no caixa utilizando a eficiência da Lightning Network.</p>
+        
+        <div class="banner-cotacao" style="margin-top: 15px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.2);">
+            {% if btc_preco %}
+                <p>Preço atual do Bitcoin: <strong>R$ {{ btc_preco|floatformat:2 }}</strong></p>
+            {% endif %}
+            <p style="font-size: 0.95em; color: #ffb703;">
+                💡 É possível pagar utilizando o <strong>Pix estatal</strong>, mas o valor pagando direto em <strong>Satoshis é 10% menor</strong>!
+            </p>
+        </div>
+    </div>
+
+    <main>
+        {% block content %}
+        {% endblock %}
+    </main>
+
+    <div id="pay-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <span class="close-modal">&times;</span>
+        
+<div id="step-confirm-address">
+    <h3>📍 Confirmar Entrega</h3>
+    <div style="background: #222; padding: 15px; border-radius: 6px; margin: 10px 0; text-align: left;">
+        <p><strong>WhatsApp:</strong> <span id="user-phone">Carregando...</span></p>
+        <p><strong>Endereço:</strong> <span id="user-address">Carregando...</span></p>
+    </div>
+    
+    <div style="display: flex; gap: 10px; margin-top: 15px;">
+        <a href="/perfil/editar/" class="btn-secondary" style="flex: 1; text-align: center; background: #444; color: #fff; padding: 10px; border-radius: 4px; text-decoration: none; font-size: 14px;">
+            ✏️ Corrigir Dados
+        </a>
+        
+        <button id="btn-proceed-to-payment" class="btn-pay" style="flex: 1; padding: 10px; font-size: 14px;">
+            ⚡ Confirmar e Pagar
+        </button>
+    </div>
+</div>
+
+        <div id="step-payment" style="display: none;">
+            <h3>⚡ Checkout KIX</h3>
+            <p>Total a pagar: <span id="modal-total-sats">0</span> sats</p>
+            
+            <div class="qr-container"></div>
+            <div class="invoice-text"></div>
+            
+            <button id="btn-confirm-mock" style="display: none;">Confirmar Simulação</button>
+            <button id="btn-retry-invoice" style="display: none;">Tentar Novamente</button>
+        </div>
+    </div>
+</div>
+</div>
+
+</body>
+</html>

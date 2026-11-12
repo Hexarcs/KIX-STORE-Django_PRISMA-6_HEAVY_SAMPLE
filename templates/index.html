@@ -1,0 +1,108 @@
+{% extends 'base.html' %}
+{% load static %} 
+
+{% block content %}
+
+    <!-- TESTE DE DEPURO 
+    <div style="background: yellow; color: black; padding: 10px; margin-bottom: 20px; font-weight: bold; border-radius: 6px;">
+        DEBUG: hero_config = {{ hero_config }} | imagem = {{ hero_config.imagem_hero }}
+    </div>-->
+
+    <!-- BANNER HERO -->
+    {% if hero_config %}
+    <section class="hero-container" style="background: #222; padding: 40px; text-align: center; color: #ffffff; margin-bottom: 30px; border-radius: 12px;">
+        <h1>{{ hero_config.titulo_hero }}</h1>
+        <p>{{ hero_config.subtitulo_hero }}</p>
+        {% if hero_config.imagem_hero %}
+            <img src="{{ hero_config.imagem_hero.url }}" alt="Hero" style="max-width: 100%; height: auto; margin-top: 15px; border-radius: 8px;">
+        {% else %}
+            <p style="color: orange; font-size: 12px;">(Aviso: Este registro não tem imagem cadastrada)</p>
+        {% endif %}
+    </section>
+    {% endif %}
+
+    <div class="section-title">Navegue pelas Macro Categorias</div>
+    <div class="section-subtitle">Todo o estoque do supermercado organizado de forma inteligente</div>
+<!--  </div>
+    <div class="categories-grid">
+        <a href="{% url 'categoria_detalhe' 'frescos' %}" class="category-card card-frescos">
+            <h3>Frescos e Perecíveis</h3>
+        </a>
+        <a href="{% url 'categoria_detalhe' 'mercearia' %}" class="category-card card-mercearia">
+            <h3>Mercearia Geral</h3>
+        </a>
+        <a href="{% url 'categoria_detalhe' 'higiene' %}" class="category-card card-higiene">
+            <h3>Higiene e Cosméticos</h3>
+        </a>
+        <a href="{% url 'categoria_detalhe' 'limpeza' %}" class="category-card card-limpeza">
+            <h3>Limpeza e Bazar</h3>
+        </a>
+  -->
+
+
+<div class="categories-grid">
+    {% for card in categorias_cards %}
+        <a href="{% url 'categoria_detalhe' card.slug %}" class="card-item card-{{ card.slug }}" style="background-image: url('{{ card.imagem_fundo.url }}'); background-size: cover; background-position: center; min-height: 120px; border-radius: 8px; padding: 15px; display: flex; align-items: flex-end; text-decoration: none;">
+            <h3 style="color: #fff; text-shadow: 1px 1px 3px rgba(0,0,0,0.8); margin: 0;">{{ card.titulo }}</h3>
+        </a>
+    {% empty %}
+        <p style="color: #fff; text-align: center; grid-column: 1 / -1;">Nenhuma categoria cadastrada no Admin ainda.</p>
+    {% endfor %}
+</div>
+
+
+
+
+
+
+    <div class="section-title">Ofertas Rápidas</div>
+    <div class="section-subtitle">Itens selecionados com desconto líquido em Sats</div>
+
+<div class="products-grid"> 
+    {% for product in products %} 
+    <div class="product-card"> 
+        <div> 
+            <!-- Link na Imagem/Ícone -->
+            <a href="{% url 'produto_detalhe' product.sku %}" style="text-decoration: none; color: inherit;">
+                <div class="product-img"> 
+                    {% if product.imagem %} 
+                        <img src="{{ product.imagem.url }}" alt="{{ product.nome }}"> 
+                    {% else %} 
+                        <div class="product-icon-fallback">{{ product.icone|default:"📦" }}</div> 
+                    {% endif %} 
+                </div> 
+                <!-- Link no Nome do Produto -->
+                <div class="product-name">{{ product.nome }}</div> 
+            </a>
+        </div> 
+
+        <div> 
+            <div class="price-box"> 
+                <div class="price-sats">⚡ {{ product.preco_sats }} Sats</div> 
+                <div class="price-brl"> 
+                    Ref: R$ {{ product.preco_brl }} (+10% R$ {{ product.preco_pix_estatal }} - via PIX-estatal) 
+                </div> 
+            </div> 
+            <div class="cart-controls"> 
+                <button class="btn-qty btn-remove" data-product-id="{{ product.sku }}">—</button> 
+                <span class="product-qty" id="qty_{{ product.sku }}">0</span> 
+                <button class="btn-qty btn-add" 
+                        data-product-id="{{ product.sku }}" 
+                        data-name="{{ product.nome }}" 
+                        data-price-sats="{{ product.preco_sats }}">+</button> 
+            </div> 
+        </div> 
+    </div> 
+    {% empty %}
+    {% if not servicos_promo %}
+    <p style="grid-column: 1 / -1; text-align: center; color: var(--texto-secundario); padding: 30px; font-size: 14px;">
+        Nenhuma oferta rápida ativa no painel administrativo no momento.
+    </p>
+    {% endif %}
+    {% endfor %}
+    {% for servico in servicos_promo %}
+        {% include 'servico_card.html' %}
+    {% endfor %}
+</div>
+
+{% endblock %}

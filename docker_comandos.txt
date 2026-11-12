@@ -1,0 +1,56 @@
+# 1. Ativa o ambiente virtual
+source venv/bin/activate
+
+# 2. Garante que as migrações e estáticos estejam atualizados
+python manage.py makemigrations
+python manage.py migrate
+python manage.py collectstatic --noinput
+
+# 3. Desativa o ambiente virtual
+deactivate
+
+# 4. Compila a nova imagem Docker
+docker build -t zeloko/supermercado-kix:latest .
+
+# 5. Envia a imagem atualizada para o Docker Hub
+docker push zeloko/supermercado-kix:latest
+
+
+
+cd ~/supermercado_kix
+docker build -t zeloko/supermercado-kix:latest .
+docker push zeloko/supermercado-kix:latest
+
+
+docker compose down
+
+docker rm -f kix_store_web
+
+docker compose up -d --build
+
+docker build: Cria a imagem localmente na máquina.
+
+docker push: Envia a imagem local para o repositório remoto (Docker Hub).
+
+docker compose up -d --build: Reconstrói e roda localmente usando o Compose (sem enviar pro Docker Hub).
+
+# Para atualizar a imagem zeloko/supermercado-kix:latest no Docker Hub com as alterações mais recentes, os comandos exatos no terminal são:
+
+# 1. Gerar a nova versão da imagem (Build)
+# Rode no terminal dentro da pasta onde está o Dockerfile:
+
+# Bash
+docker build -t zeloko/supermercado-kix:latest .
+# (Se o seu docker-compose.yml tiver o parâmetro build: . configurado no serviço web, você também pode simplesmente usar docker compose build)
+
+# 2. Autenticar no Docker Hub
+# Caso ainda não tenha feito o login nesta sessão do terminal:
+
+# Bash
+docker login
+
+# 3. Enviar para o Docker Hub (Push)
+
+# Bash
+docker push zeloko/supermercado-kix:latest
+# Isso vai sobrescrever a versão antiga no Docker Hub mantendo a tag :latest. Quando você precisar puxar a nova versão em qualquer outro servidor, basta executar docker pull zeloko/supermercado-kix:latest.

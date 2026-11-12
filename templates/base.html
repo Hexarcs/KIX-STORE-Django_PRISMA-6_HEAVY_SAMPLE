@@ -1,0 +1,392 @@
+{% load static %}{% load socialaccount %}<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}?v=5">
+    <link rel="icon" type="image/png" href="{% static 'img/favicon_cart_kix.png' %}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ site_config.meta_title }}</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+    <script>
+        window.csrfToken = "{{ csrf_token }}";
+    </script>
+    <script src="{% static 'js/script.js' %}?v=4" defer></script>
+    <style>
+
+/* 1. Controla a grade para que 1 único card NÃO ocupe a tela inteira */
+.products-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 280px)); /* auto-fill evita que 1 card expanda */
+    gap: 20px;
+    justify-content: start; /* Alinha os cards à esquerda quando houver poucos */
+}
+
+/* 2. Limita o tamanho máximo do card */
+.product-card {
+    width: 100%;
+    max-width: 280px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+/* 3. Container de imagem quadrado e centralizado */
+.product-img {
+    width: 100%;
+    height: 200px; /* Altura fixa padrão para todos os cards */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #1a1a1a; /* Fundo escuro para preencher sobras de imagens com proporções diferentes */
+    border-radius: 8px;
+    overflow: hidden;
+    padding: 8px;
+}
+
+/* 4. Garante que a imagem inteira apareça (NUNCA corta/cropa) */
+.product-img img {
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+    object-fit: contain; /* Exibe a imagem completa dentro do container */
+}
+
+/* 1. Grade flexível que impede que poucos cards se estiquem */
+.categories-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 280px)); /* auto-fill fixa o tamanho máximo dos cards */
+    gap: 16px;
+    justify-content: start; /* Alinha os cards à esquerda */
+    margin-bottom: 30px;
+}
+
+/* 2. Garante o limite de largura e altura padronizada para cada card */
+.categories-grid .card-item {
+    width: 100%;
+    max-width: 280px;
+    min-height: 130px;
+    box-sizing: border-box;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* 3. Efeito suave ao passar o mouse */
+.categories-grid .card-item:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+    </style>
+    <style>
+        /* Botão flutuante do WhatsApp (canto inferior esquerdo) */
+        .whatsapp-float {
+            position: fixed;
+            left: 16px;
+            bottom: 16px;
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 56px;
+            height: 56px;
+            background-color: #25D366;
+            border-radius: 50%;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .whatsapp-float:hover {
+            transform: scale(1.08);
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+        }
+        .whatsapp-float svg {
+            width: 30px;
+            height: 30px;
+            fill: #ffffff;
+        }
+    </style>
+</head>
+<body>
+    
+    <button class="theme-toggle-btn" id="theme-toggle" title="Alternar Tema">☀️</button>
+
+<header style="background-color: {{ site_config.header_bg_color }}; display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; border-bottom: 1px solid rgba(255,255,255,0.1);">
+    
+<div class="logo-container" style="display: flex; align-items: center; gap: 10px;">
+    {% if site_config.logo %}
+        <img src="{{ site_config.logo.url }}" alt="{{ site_config.nome_loja }}" style="max-height: 40px; width: auto; object-fit: contain;">
+    {% endif %}
+    <div class="logo">{{ site_config.nome_loja }}</div>
+    <span class="kix-badge" style="background-color: {{ site_config.badge_bg_color }}; color: {{ site_config.badge_text_color }};">
+        {{ site_config.badge_ecossistema }}
+    </span>
+</div>
+
+    <!-- Carrinho -->
+    <div style="display: flex; align-items: center; gap: 15px; color: {{ site_config.header_text_color }}; font-size: 14px;">
+        <span>🛒 <strong id="cart-counter">0</strong> itens</span>
+        
+        <span style="color: {{ site_config.sats_color }}; font-weight: bold;">
+            ⚡ <span id="cart-total-sats">0</span> Sats
+        </span>
+        
+        <button id="btn-clear-cart" style="display: none; padding: 5px 10px; border-radius: 4px; font-size: 12px; cursor: pointer; background: transparent; border: 1px solid {{ site_config.btn_clear_color }}; color: {{ site_config.btn_clear_color }};">
+            {{ site_config.btn_clear_text }}
+        </button>
+        
+        <button id="btn-pay" style="display: none; padding: 8px 15px; border-radius: 6px; font-weight: bold; border: none; cursor: pointer; background-color: {{ site_config.btn_pay_bg }}; color: {{ site_config.btn_pay_color }};">
+            {{ site_config.btn_pay_text }}
+        </button>
+    </div>
+
+    <!-- Box de Autenticação -->
+    <div style="display: flex; align-items: center;">
+        {% if user.is_authenticated %}
+            <div style="display: flex; align-items: center; gap: 10px; color: {{ site_config.header_text_color }}; font-size: 14px;">
+                <span>{{ site_config.auth_greeting }} <strong>{{ user.email }}</strong></span>
+                
+                <a href="{% url 'editar_perfil' %}" style="background: transparent; border: 1px solid {{ site_config.btn_edit_color }}; color: {{ site_config.btn_edit_color }}; padding: 4px 10px; border-radius: 4px; font-size: 12px; text-decoration: none; transition: 0.3s;">
+                    {{ site_config.btn_edit_text }}
+                </a>
+
+                <a href="{% url 'account_logout' %}" style="padding: 6px 12px; border-radius: 4px; text-decoration: none; font-size: 12px; font-weight: bold; background-color: {{ site_config.btn_logout_bg }}; color: {{ site_config.btn_logout_color }};">
+                    {{ site_config.btn_logout_text }}
+                </a>
+            </div>
+        {% else %}
+            {% get_providers as socialaccount_providers %}
+            {% if socialaccount_providers %}
+                <a href="{% provider_login_url 'google' %}" style="padding: 8px 15px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 14px; background-color: {{ site_config.btn_login_bg }}; color: {{ site_config.btn_login_color }};">
+                    {{ site_config.btn_login_text }}
+                </a>
+            {% else %}
+                <a href="{% url 'account_login' %}" style="padding: 8px 15px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 14px; background-color: {{ site_config.btn_login_bg }}; color: {{ site_config.btn_login_color }};">
+                    {{ site_config.btn_login_fallback_text }}
+                </a>
+            {% endif %}
+        {% endif %}
+    </div>
+</header>
+
+{% if site_config.exibir_banner %}
+    <div style="background-color: {{ site_config.banner_bg_color }}; padding: 25px; border-radius: 12px; text-align: center; margin-bottom: 30px;">
+        
+        <h2 style="color: {{ site_config.banner_title_color }}; margin-top: 0; margin-bottom: 10px;">
+            {{ site_config.banner_titulo }}
+        </h2>
+        
+        <p style="color: {{ site_config.banner_text_color }}; margin-bottom: 0;">
+            {{ site_config.banner_texto }}
+        </p>
+        
+        <div style="margin-top: 15px; padding-top: 10px; border-top: 1px solid {{ site_config.banner_border_color }};">
+            {% if site_config.exibir_cotacao and btc_preco %}
+                <p style="color: {{ site_config.banner_cotacao_color }}; margin: 5px 0;">
+                    {{ site_config.banner_texto_cotacao }} <strong>R$ {{ btc_preco|floatformat:2 }}</strong>
+                </p>
+            {% endif %}
+            
+            <p style="font-size: 0.95em; color: {{ site_config.banner_economia_color }}; margin: 5px 0;">
+                {{ site_config.banner_texto_economia }}
+            </p>
+        </div>
+        
+    </div>
+{% endif %}
+    </div>
+
+    <main>
+        {% block content %}
+        {% endblock %}
+    </main>
+
+   <div id="pay-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <span class="close-modal">&times;</span>
+        
+        <!-- ETAPA 1: CONFIRMAR DADOS -->
+        <div id="step-confirm-address">
+            <h3>📍 Confirmar Entrega</h3>
+            <div style="background: #222; padding: 15px; border-radius: 6px; margin: 10px 0; text-align: left;">
+                <p><strong>WhatsApp:</strong> <span id="user-phone">Carregando...</span></p>
+                <p><strong>Endereço:</strong> <span id="user-address">Carregando...</span></p>
+            </div>
+            
+            <div style="display: flex; gap: 10px; margin-top: 15px;">
+                <a href="/perfil/editar/" class="btn-secondary" style="flex: 1; text-align: center; background: #444; color: #fff; padding: 10px; border-radius: 4px; text-decoration: none; font-size: 14px;">
+                    ✏️ Corrigir Dados
+                </a>
+            </div>
+
+            <div style="margin-top: 15px; display: flex; flex-direction: column; gap: 10px;">
+                <button id="btn-proceed-to-payment" class="btn-pay" style="background: #f2a900; color: #000; width: 100%;">
+                    ⚡ Pagar Nativo com KIX (10% de Desconto)
+                </button>
+                
+                <button id="btn-pix-estatal" class="btn-pay" style="background: #32b3a2; color: #fff; width: 100%;">
+                    📱 Pagar pelo PIX-Estatal (+10% Taxa)
+                </button>
+            </div>
+        </div>
+
+        <!-- ETAPA 2: CHECKOUT KIX (SATS) -->
+        <div id="step-payment" style="display: none; text-align: center;">
+            <h3 style="margin-bottom: 10px; color: #f2a900;">⚡ Checkout KIX</h3>
+            
+            <!-- Lista de Itens do Carrinho (Sats) -->
+            <div style="background: #181818; padding: 10px 12px; border-radius: 6px; border: 1px solid #333; margin: 10px 0; text-align: left; max-height: 110px; overflow-y: auto;">
+                <p style="margin: 0 0 6px 0; font-size: 11px; color: #888; font-weight: bold; border-bottom: 1px solid #2a2a2a; padding-bottom: 4px;">📦 ITENS SELECIONADOS:</p>
+                <div id="kix-items-list" style="font-size: 13px; color: #ccc; display: flex; flex-direction: column; gap: 4px;">
+                    <!-- Preenchido via JavaScript -->
+                </div>
+            </div>
+
+            <p style="font-size: 14px; margin-bottom: 5px; color: var(--texto-secundario);">Total a pagar:</p>
+            <p style="font-size: 22px; font-weight: bold; margin-top: 0; color: #fff;"><span id="modal-total-sats-display">0</span> sats</p>
+            
+            <div class="qr-container" style="background: #fff; padding: 12px; border-radius: 12px; display: inline-block; margin: 10px auto; min-width: 150px; min-height: 150px;">
+            </div>
+
+            <div style="background: #111; padding: 10px; border-radius: 6px; border: 1px solid #333; margin: 10px 0;">
+                <span style="font-size: 11px; color: #888; display: block; margin-bottom: 5px; text-align: left;">Código Copia e Cola:</span>
+                <div class="invoice-text" style="font-family: monospace; font-size: 11px; color: #aaa; word-break: break-all; max-height: 60px; overflow-y: auto; text-align: left; padding-right: 5px;">
+                    Aguardando dados...
+                </div>
+            </div>
+            
+            <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 15px;">
+                <button id="btn-confirm-mock" class="btn-pay" style="display: none; width: 100%; background: #27ae60; color: #fff;">
+                    Confirmar 
+                </button>
+                <button id="btn-retry-invoice" class="btn-pay" style="display: none; width: 100%; background: #e74c3c; color: #fff;">
+                    🔄 Tentar Novamente
+                </button>
+            </div>
+        </div>
+
+        <!-- ETAPA 3: CHECKOUT PIX ESTATAL -->
+        <div id="step-pix-estatal" style="display: none;">
+            <h3>🏛️ Checkout PIX Estatal</h3>
+            
+            <!-- QR Code da Chave PIX -->
+            <div class="pix-qr-container" style="text-align: center; margin: 10px 0;">
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data={{ pix_config.chave_pix }}" 
+                     alt="QR Code Chave PIX" 
+                     style="background: #fff; padding: 8px; border-radius: 10px; width: 160px; height: 160px; display: inline-block;">
+            </div>
+
+            <!-- Lista de Itens do Carrinho (PIX) -->
+            <div style="background: #181818; padding: 10px 12px; border-radius: 6px; border: 1px solid #333; margin: 10px 0; text-align: left; max-height: 110px; overflow-y: auto;">
+                <p style="margin: 0 0 6px 0; font-size: 11px; color: #888; font-weight: bold; border-bottom: 1px solid #2a2a2a; padding-bottom: 4px;">📦 ITENS SELECIONADOS:</p>
+                <div id="pix-items-list" style="font-size: 13px; color: #ccc; display: flex; flex-direction: column; gap: 4px;">
+                    <!-- Preenchido via JavaScript -->
+                </div>
+            </div>
+
+            <div style="background: #222; padding: 12px; border-radius: 6px; margin: 10px 0; text-align: left; font-size: 14px;">
+                <p style="margin: 4px 0;">Subtotal do Carrinho: <span id="pix-subtotal-sats">0</span> sats</p>
+                <p style="color: #ff5555; margin: 4px 0;">⚠️ {{ pix_config.rotulo_taxa_pix|default:"Taxa de Processamento Fiat" }}: +{{ pix_config.taxa_estatal_percentual }}%</p>
+                <p style="margin: 4px 0;">Cotação utilizada: <strong style="color: #f2a900;">R$ <span id="pix-btc-cotacao">0</span></strong></p>
+                <hr style="border-color: #333; margin: 8px 0;">
+                <p style="font-size: 17px; margin: 4px 0;">Total a pagar: <strong style="color: #32b3a2;">R$ <span id="pix-total-reais">0,00</span></strong></p>
+            </div>
+            
+            <div style="background: #111; padding: 10px; border: 1px dashed #32b3a2; border-radius: 4px; margin-bottom: 10px;">
+                <p style="margin: 0; font-size: 12px; color: #aaa;">Titular: <strong>{{ pix_config.nome_titular }}</strong></p>
+                <p style="margin: 4px 0 0 0; font-size: 12px; color: #aaa;">Chave PIX:</p>
+                <code style="font-size: 15px; color: #fff; display: block; margin-top: 3px; word-break: break-all;">
+                    {{ pix_config.chave_pix }}
+                </code>
+            </div>
+            
+            <p style="font-size: 11px; color: #888; font-style: italic;">{{ pix_config.instrucao_pagamento }}</p>
+        </div>
+
+    </div>
+</div>
+
+    </div>
+</div>
+
+        </div>
+    </div>
+    <footer class="site-footer">
+        <div class="footer-container">
+
+            <!-- Coluna 1: Sobre a empresa -->
+            <div class="footer-col footer-about">
+                <h3>{{ site_config.nome_loja }}</h3>
+                {% if rodape_config.descricao_curta %}
+                    <p class="footer-desc">{{ rodape_config.descricao_curta }}</p>
+                {% endif %}
+
+                {% if rodape_config.site_principal %}
+                    <a class="footer-link" href="{{ rodape_config.site_principal }}" target="_blank" rel="noopener">🌐 {{ rodape_config.site_principal }}</a>
+                {% endif %}
+
+                <div class="footer-social">
+                    {% if rodape_config.facebook_url %}
+                        <a href="{{ rodape_config.facebook_url }}" target="_blank" rel="noopener" aria-label="Facebook">Facebook</a>
+                    {% endif %}
+                    {% if rodape_config.instagram_url %}
+                        <a href="{{ rodape_config.instagram_url }}" target="_blank" rel="noopener" aria-label="Instagram">Instagram</a>
+                    {% endif %}
+                    {% if rodape_config.youtube_url %}
+                        <a href="{{ rodape_config.youtube_url }}" target="_blank" rel="noopener" aria-label="YouTube">YouTube</a>
+                    {% endif %}
+                    {% if rodape_config.x_url %}
+                        <a href="{{ rodape_config.x_url }}" target="_blank" rel="noopener" aria-label="X">X</a>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Coluna 2: Contato -->
+            <div class="footer-col footer-contact">
+                <h3>Contato</h3>
+                {% if rodape_config.telefone_principal %}
+                    <p>📞 {{ rodape_config.telefone_principal }}</p>
+                {% endif %}
+                {% if rodape_config.outros_telefones %}
+                    <p>📱 {{ rodape_config.outros_telefones }}</p>
+                {% endif %}
+                {% if rodape_config.email_contato %}
+                    <p>✉️ {{ rodape_config.email_contato }}</p>
+                {% endif %}
+                {% if rodape_config.endereco %}
+                    <p>📍 {{ rodape_config.endereco }}</p>
+                {% endif %}
+            </div>
+
+            <!-- Coluna 3: Formulário de contato -->
+            {% if telegram_config.ativo %}
+            <div class="footer-col footer-form">
+                <h3>{{ telegram_config.titulo_form }}</h3>
+                <form id="contact-form" data-endpoint="/send_telegram">
+                    {% csrf_token %}
+                    <input class="form-input" type="text" name="name" placeholder="Seu nome" required>
+                    <input class="form-input" type="email" name="email" placeholder="Seu e-mail" required>
+                    <input class="form-input" type="text" name="telegram" placeholder="Telegram/WhatsApp (opcional)">
+                    <textarea class="form-input" name="message" rows="4" placeholder="Sua mensagem" required></textarea>
+                    <button type="submit" class="footer-submit">{{ telegram_config.texto_botao }}</button>
+                </form>
+                <p id="contact-form-status" class="footer-form-status"></p>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="footer-bottom">
+            <p>© {{ site_config.nome_loja }}</p>
+        </div>
+    </footer>
+
+    <input type="hidden" id="btc-price-hidden" value="{{ btc_preco|stringformat:".2f" }}">
+
+    {% if whatsapp_config.ativo %}
+    <a href="{{ whatsapp_config.url }}" target="_blank" rel="noopener noreferrer" class="whatsapp-float" aria-label="Fale conosco no WhatsApp" title="Fale conosco no WhatsApp">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" role="img" aria-hidden="true">
+            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+        </svg>
+    </a>
+    {% endif %}
+</body>
+</html>
+

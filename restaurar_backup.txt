@@ -1,0 +1,24 @@
+# 1. Garanta que está na pasta do projeto
+cd ~/supermercado_kix
+
+# 2. Desative o venv atual
+deactivate
+
+# 3. Remova a pasta do ambiente virtual quebrado
+rm -rf venv
+
+# 4. Crie um novo ambiente virtual limpo
+python3 -m venv venv
+
+# 5. Ative o novo ambiente
+source venv/bin/activate
+
+# 6. Reinstale as dependências do projeto
+pip install -r requirements.txt
+
+# 7. Execute as migrações e reinicie o serviço
+python manage.py migrate
+sudo systemctl restart supermercado
+
+
+#remova o EOF do views

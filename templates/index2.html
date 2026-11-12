@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+{% load static %}  {% block content %}
+    <div class="section-title">Navegue pelas Macro Categorias</div>
+    <div class="section-subtitle">Todo o estoque do supermercado organizado de forma inteligente</div>
+
+<div class="categories-grid">
+    <a href="{% url 'categoria_detalhe' 'frescos' %}" class="category-card card-frescos">
+        <!-- <div class="category-icon"><img src="{% static 'images/pereciveis.png' %}" alt="Frescos"></div> -->
+        <h3>Frescos e Perecíveis</h3>
+    </a>
+    <a href="{% url 'categoria_detalhe' 'mercearia' %}" class="category-card card-mercearia">
+        <!-- <div class="category-icon"><img src="{% static 'images/mercearia.png' %}" alt="Mercearia"></div> -->
+        <h3>Mercearia Geral</h3>
+    </a>
+    <a href="{% url 'categoria_detalhe' 'higiene' %}" class="category-card card-higiene">
+        <!-- <div class="category-icon"><img src="{% static 'images/higiene.png' %}" alt="Higiene"></div> -->
+        <h3>Higiene e Cosméticos</h3>
+    </a>
+    <a href="{% url 'categoria_detalhe' 'limpeza' %}" class="category-card card-limpeza">
+        <!-- <div class="category-icon"><img src="{% static 'images/limpeza.png' %}" alt="Limpeza"></div> -->
+        <h3>Limpeza e Bazar</h3>
+    </a>
+</div>
+
+    <div class="section-title">Ofertas Rápidas</div>
+    <div class="section-subtitle">Itens selecionados com desconto líquido em Sats</div>
+
+    <div class="products-grid">
+        {% for product in products %}
+        <div class="product-card">
+            <div>
+                <div class="product-img">
+                    {% if product.imagem %}
+                        <img src="{{ product.imagem.url }}" alt="{{ product.nome }}">
+                    {% else %}
+                        <div class="product-icon-fallback">{{ product.icone|default:"📦" }}</div>
+                    {% endif %}
+                </div>
+                <div class="product-name">{{ product.nome }}</div>
+            </div>
+
+            <div>
+                <div class="price-box">
+                    <div class="price-sats">⚡ {{ product.preco_sats }} Sats</div>
+                    <div class="price-brl">
+                        Ref: R$ {{ product.preco_brl }} (+10% R$ {{ product.preco_pix_estatal }} - via PIX-estatal)
+                    </div>
+                </div>
+                <div class="cart-controls">
+                    <button class="btn-qty btn-remove" data-product-id="{{ product.sku }}">—</button>
+                    <span class="product-qty" id="qty_{{ product.sku }}">0</span>
+                    <button class="btn-qty btn-add"
+                            data-product-id="{{ product.sku }}"
+                            data-name="{{ product.nome }}"
+                            data-price-sats="{{ product.preco_sats }}">+</button>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <p style="grid-column: 1 / -1; text-align: center; color: var(--texto-secundario); padding: 30px; font-size: 14px;">
+            Nenhuma oferta rápida ativa no painel administrativo no momento.
+        </p>
+        {% endfor %}
+    </div>
+
+{% endblock %}

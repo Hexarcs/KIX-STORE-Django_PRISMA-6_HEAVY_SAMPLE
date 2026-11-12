@@ -1,0 +1,186 @@
+ssh root@SEU_SERVIDOR_IP
+
+
+cd Downloads
+cd C:\Users\TEMP.APS.050
+cd Downloads
+ssh -i SUA_CHAVE.pem admin@SEU_SERVIDOR_IP
+
+//////reiniciar o servidor
+cd /home/admin/supermercado_kix/
+source venv/bin/activate
+# Detecta a mudança no models.py e cria o arquivo de migração
+python manage.py makemigrations
+
+# Aplica a alteração de fato no seu banco de dados
+python manage.py migrate
+
+
+sudo kill -9 $(pgrep -f "manage.py")
+nohup python manage.py runserver 0.0.0.0:8000 > django.log 2>&1 &
+
+/////////////////////////////////////////////////////////////////////
+
+Write-Host "=== MIGRATE DOWNLOADS + CLEAN ===" -ForegroundColor Cyan
+
+$base = "$env:SystemDrive\Users"
+
+# Perfil atual
+$currentPath = $env:USERPROFILE
+$currentName = Split-Path $currentPath -Leaf
+$currentDownloads = Join-Path $currentPath "Downloads"
+
+Write-Host "Current profile: $currentName"
+
+# Extrai número
+if ($currentName -match "TEMP\.APS\.(\d+)") {
+    $num = [int]$matches[1]
+
+    # Perfil anterior
+    $prevName = "TEMP.APS." + ($num - 1).ToString("D3")
+    $prevPath = Join-Path $base $prevName
+    $prevDownloads = Join-Path $prevPath "Downloads"
+
+    Write-Host "Previous profile: $prevName"
+
+    # =========================
+    # COPIAR DOWNLOADS
+    # =========================
+    if (Test-Path $prevDownloads) {
+        Write-Host "Copying Downloads from $prevName..."
+
+        try {
+            Copy-Item "$prevDownloads\*" -Destination $currentDownloads `
+                -Recurse -Force -ErrorAction SilentlyContinue
+
+            Write-Host "Copy done ✅" -ForegroundColor Green
+        }
+        catch {
+            Write-Host "Some files could not be copied (locked)" -ForegroundColor Yellow
+        }
+    } else {
+        Write-Host "No Downloads folder in previous profile"
+    }
+
+    # =========================
+    # LIMPAR ANTERIOR
+    # =========================
+    if (Test-Path $prevPath) {
+        Write-Host "Cleaning previous profile..."
+
+        try {
+            Get-ChildItem $prevPath -Force -ErrorAction SilentlyContinue |
+                Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+
+            Write-Host "Cleanup done ✅" -ForegroundColor Green
+        }
+        catch {
+            Write-Host "Partial cleanup (files locked)" -ForegroundColor Yellow
+        }
+    }
+
+} else {
+    Write-Host "Not running in TEMP.APS profile" -ForegroundColor Red
+}
+
+Write-Host "=== DONE ==="
+
+
+
+
+
+
+/////////////////////////////////////////////////////////////////
+Write-Host "=== AUTO CLEAN TEMP ===" -ForegroundColor Cyan
+
+# Caminho base
+$base = "$env:SystemDrive\Users"
+
+# Descobre seu perfil atual
+$current = (Split-Path $env:USERPROFILE -Leaf)
+
+Write-Host "Current profile: $current"
+
+# Extrai o número (ex: 051)
+if ($current -match "TEMP\.APS\.(\d+)") {
+    $num = [int]$matches[1]
+
+    # Perfil anterior
+    $prev = "TEMP.APS." + ($num - 1).ToString("D3")
+    $prevPath = Join-Path $base $prev
+
+    Write-Host "Trying to clean previous: $prev"
+
+    if (Test-Path $prevPath) {
+
+        try {
+            # apaga conteúdo interno só
+            Get-ChildItem $prevPath -Force -ErrorAction SilentlyContinue |
+                Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+
+            Write-Host "Cleaned: $prev" -ForegroundColor Green
+        }
+        catch {
+            Write-Host "Partial clean (files locked): $prev" -ForegroundColor Yellow
+        }
+
+    } else {
+        Write-Host "Previous not found: $prev"
+    }
+
+} else {
+    Write-Host "Not running in TEMP profile?" -ForegroundColor Red
+}
+
+Write-Host "=== DONE ==="
+
+
+
+
+printscreen poweshell
+
+
+Add-Type -AssemblyName System.Windows.Forms
+Add-Type -AssemblyName System.Drawing
+
+# Captura tamanho da tela
+$bounds = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+
+# Cria bitmap
+$bitmap = New-Object System.Drawing.Bitmap $bounds.Width, $bounds.Height
+
+# Cria objeto gráfico
+$graphics = [System.Drawing.Graphics]::FromImage($bitmap)
+
+# Copia tela para imagem
+$graphics.CopyFromScreen($bounds.Location, [System.Drawing.Point]::Empty, $bounds.Size)
+
+# Caminho do arquivo
+$path = "$env:USERPROFILE\Desktop\screenshot_$(Get-Date -Format 'yyyyMMdd_HHmmss').png"
+
+# Salva
+$bitmap.Save($path, [System.Drawing.Imaging.ImageFormat]::Png)
+
+Write-Output "Print salvo em: $path"
+
+
+
+
+{
+    "name": "Supermercado KIX - EC2 AWS",
+    "host": "SEU_SERVIDOR_IP",
+    "protocol": "sftp",
+    "port": 22,
+    "username": "admin",
+    "privateKeyPath": "CAMINHO/PARA/SUA_CHAVE.pem",
+    "remotePath": "/home/admin/supermercado_kix", 
+    "uploadOnSave": true,
+    "downloadOnOpen": true,
+    "ignore": [
+        ".vscode",
+        ".git",
+        "venv",
+        "__pycache__",
+        "*.pyc"
+    ]
+}

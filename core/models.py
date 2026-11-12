@@ -1,0 +1,535 @@
+import decimal
+from django.db import models
+from django.contrib.auth.models import User
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+
+
+class Categoria(models.Model):
+    """Define as categorias da loja."""
+    nome = models.CharField(max_length=100)
+    slug = models.SlugField(unique=True, help_text="Ex: frescos, mercearia, higiene, limpeza")
+
+    def __str__(self):
+        return self.nome
+
+
+class MacroCategoria(models.Model):
+    """Define as macro categorias exibidas na vitrine principal."""
+    nome = models.CharField(max_length=100)
+    slug = models.SlugField(unique=True)
+    ordem = models.IntegerField(default=0)
+    ativo = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name = "Macro Categoria"
+        verbose_name_plural = "Macro Categorias"
+        ordering = ['ordem']
+
+    def __str__(self):
+        return self.nome
+
+
+class CotacaoBitcoin(models.Model):
+    """Armazena a última cotação do Bitcoin obtida via API."""
+    preco_brl = models.DecimalField(max_digits=12, decimal_places=2)
+    ultima_atualizacao = models.DateTimeField()
+
+    def __str__(self):
+        return f"BTC: R$ {self.preco_brl} em {self.ultima_atualizacao}"
+
+
+class Produto(models.Model):
+    sku = models.CharField(
+        max_length=50, 
+        unique=True, # Adicionado unique=True se for usar SKU na URL
+        null=True, 
+        blank=True, 
+        help_text="Identificador único para o JS. Ex: prod_cafe_500"
+    )
+    nome = models.CharField(max_length=255)
+    
+    # NOVO CAMPO: Descrição detalhada do produto
+    descricao = models.TextField(
+        blank=True, 
+        null=True, 
+        verbose_name="Descrição do Produto"
+    )
+    
+    # Ligação com a Categoria
+    categoria = models.ForeignKey(
+        Categoria, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True, 
+        related_name='produtos'
+    )
+
+    icone = models.CharField(
+        max_length=10,
+        blank=True,
+        null=True,
+        help_text="Insira um Emoji correspondente (ex: ☕, 🥫)",
+    )
+
+    preco_sats = models.IntegerField(verbose_name="Preço em Satoshis (Sats)")
+
+    imagem = models.ImageField(
+        upload_to="produtos/",
+        blank=True,
+        null=True,
+        verbose_name="Foto do Produto (Quadrada)",
+    )
+
+    is_promo = models.BooleanField(
+        default=False, verbose_name="Exibir em Ofertas Rápidas (Máx 4)"
+    )
+
+    def __str__(self):
+        return self.nome
+
+    @property
+    def preco_brl(self):
+        ultima_cotacao = CotacaoBitcoin.objects.last()
+        if ultima_cotacao and ultima_cotacao.preco_brl > 0:
+            valor_sat_em_brl = ultima_cotacao.preco_brl / decimal.Decimal("100000000")
+            preco_calculado = decimal.Decimal(self.preco_sats) * valor_sat_em_brl
+        else:
+            fallback_sat_em_brl = decimal.Decimal("0.005")
+            preco_calculado = decimal.Decimal(self.preco_sats) * fallback_sat_em_brl
+
+        return preco_calculado.quantize(decimal.Decimal("0.01"))
+
+    @property
+    def preco_pix_estatal(self):
+        valor_inflacionado = self.preco_brl * decimal.Decimal("1.1")
+        return valor_inflacionado.quantize(decimal.Decimal("0.01"))
+
+
+class Profile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
+    endereco = models.TextField(verbose_name="Endereço Completo", blank=True, null=True)
+    telefone = models.CharField(max_length=20, verbose_name="WhatsApp", blank=True, null=True)
+
+    def __str__(self):
+        return f"Perfil de {self.user.username}"
+
+
+# =========================================================================
+# SIGNALS: Garante a existência do Profile de forma segura contra falhas
+# =========================================================================
+
+@receiver(post_save, sender=User)
+def create_user_profile(sender, instance, created, **kwargs):
+    """Cria o Profile automaticamente ao registrar um novo User."""
+    if created:
+        Profile.objects.get_or_create(user=instance)
+
+@receiver(post_save, sender=User)
+def save_user_profile(sender, instance, **kwargs):
+    """Garante que o perfil exista e seja salvo ao atualizar o User."""
+    profile, _ = Profile.objects.get_or_create(user=instance)
+    profile.save()
+    
+    
+# =========================================================================
+# CONFIGURAÇÃO DO HERO (HOME)
+# =========================================================================    
+
+class HomeConfig(models.Model):
+    titulo_hero = models.CharField(max_length=200, default="Bem-vindo ao Supermercado Kix", verbose_name="Título do Hero")
+    subtitulo_hero = models.TextField(blank=True, null=True, verbose_name="Subtítulo do Hero")
+    imagem_hero = models.ImageField(upload_to='hero/', verbose_name="Imagem do Hero")
+    ativo = models.BooleanField(default=True, verbose_name="Ativo")
+
+    class Meta:
+        verbose_name = "Configuração do Hero (Home)"
+        verbose_name_plural = "Configurações do Hero (Home)"
+
+    def __str__(self):
+        return "Banner Hero da Home"
+
+#==============================bagde e nome do site===================
+
+#from django.db import models
+
+class SiteConfig(models.Model):
+    # SEO e Nomenclatura
+    logo = models.ImageField(upload_to='site/', blank=True, null=True, verbose_name="Logo do Site")
+    meta_title = models.CharField(max_length=150, default="Supermercado Itatingax - Economia Real no Ecossistema")
+    nome_loja = models.CharField(max_length=100, default="Supermercado Itatingax")
+    
+    # Textos e Cores da Badge
+    badge_ecossistema = models.CharField(max_length=100, default="Membro do Ecossistema KIX")
+    badge_bg_color = models.CharField(max_length=7, default="#f7931a", help_text="Cor de fundo da Badge (Hex: #f7931a)")
+    badge_text_color = models.CharField(max_length=7, default="#000000", help_text="Cor do texto da Badge (Hex: #000000)")
+
+    # Estilização Geral do Header
+    header_bg_color = models.CharField(max_length=7, default="#1a1a1a", help_text="Cor de fundo (Hex: #1a1a1a)")
+    header_text_color = models.CharField(max_length=7, default="#ffffff", help_text="Cor do texto principal")
+    sats_color = models.CharField(max_length=7, default="#f7931a", help_text="Cor da palavra Sats (Hex: #f7931a)")
+
+    # Textos e Cores do Carrinho
+    btn_clear_text = models.CharField(max_length=30, default="🗑️ Limpar")
+    btn_clear_color = models.CharField(max_length=7, default="#ff4d4d", help_text="Cor do botão Limpar")
+    
+    btn_pay_text = models.CharField(max_length=30, default="Pagar")
+    btn_pay_bg = models.CharField(max_length=7, default="#28a745", help_text="Fundo do botão Pagar")
+    btn_pay_color = models.CharField(max_length=7, default="#ffffff", help_text="Texto do botão Pagar")
+
+    # Textos e Cores da Autenticação (Logado)
+    auth_greeting = models.CharField(max_length=30, default="Olá,")
+    btn_edit_text = models.CharField(max_length=30, default="Editar Endereço")
+    btn_edit_color = models.CharField(max_length=7, default="#f7931a", help_text="Cor da borda/texto de Editar")
+    btn_logout_text = models.CharField(max_length=30, default="Sair")
+    btn_logout_bg = models.CharField(max_length=7, default="#dc3545", help_text="Fundo do botão Sair")
+    btn_logout_color = models.CharField(max_length=7, default="#ffffff", help_text="Texto do botão Sair")
+
+    # Textos e Cores da Autenticação (Deslogado)
+    btn_login_text = models.CharField(max_length=50, default="Entrar com o Google")
+    btn_login_fallback_text = models.CharField(max_length=50, default="Entrar")
+    btn_login_bg = models.CharField(max_length=7, default="#4285f4", help_text="Fundo do botão Entrar")
+    btn_login_color = models.CharField(max_length=7, default="#ffffff", help_text="Texto do botão Entrar")
+
+    # Configurações do Banner (Textos e Exibição)
+    exibir_banner = models.BooleanField(default=True, help_text="Exibir o banner promocional no topo?")
+    exibir_cotacao = models.BooleanField(default=True, help_text="Exibir a cotação do Bitcoin dentro do banner?")
+    
+    banner_titulo = models.CharField(max_length=150, default="⚡ Pagamento Nativo em Satoshis")
+    banner_texto = models.TextField(default="Logística integrada ao Ecossistema KIX. Economia real direto no caixa utilizando a eficiência da Lightning Network.")
+    banner_texto_cotacao = models.CharField(max_length=50, default="Preço atual do Bitcoin:")
+    banner_texto_economia = models.TextField(default="💡 É possível pagar utilizando o Pix estatal, mas o valor pagando direto em Satoshis é 10% menor!")
+
+    # Estilização do Banner (Cores)
+    banner_bg_color = models.CharField(max_length=7, default="#222222", help_text="Cor de fundo do banner (Hex: #222222)")
+    banner_title_color = models.CharField(max_length=7, default="#ffffff", help_text="Cor do título do banner")
+    banner_text_color = models.CharField(max_length=7, default="#dddddd", help_text="Cor do texto descritivo")
+    banner_border_color = models.CharField(max_length=30, default="rgba(255,255,255,0.2)", help_text="Cor da linha divisória (Hex ou RGBA)")
+    banner_cotacao_color = models.CharField(max_length=7, default="#ffffff", help_text="Cor do texto do preço do BTC")
+    banner_economia_color = models.CharField(max_length=7, default="#ffb703", help_text="Cor da mensagem de economia (Hex: #ffb703)")
+
+    def save(self, *args, **kwargs):
+        # Garante que sempre haverá apenas uma linha de configuração (Singleton)
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def get_solo(cls):
+        obj, created = cls.objects.get_or_create(pk=1)
+        return obj
+
+    def __str__(self):
+        return "Configurações do Site"
+    
+    
+#---------categorias------------------
+
+from django.db import models
+
+class CategoriaCard(models.Model):
+    titulo = models.CharField(max_length=100)
+    slug = models.SlugField(unique=True, help_text="Ex: frescos, mercearia, higiene, limpeza")
+    imagem_fundo = models.ImageField(upload_to='banners_cards/', help_text="Imagem de fundo do card")
+    ordem = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ['ordem']
+
+    def __str__(self):
+        return self.titulo    
+
+
+
+
+
+# =========================================================================
+# CONFIGURAÇÃO DO PIX
+# =========================================================================
+
+class ConfiguracaoPix(models.Model):
+    """Configurações centralizadas do PIX para destaque no Admin."""
+    
+    chave_pix = models.CharField(
+        max_length=255,
+        default="SUA_CHAVE_PIX_AQUI",
+        verbose_name="Chave PIX (E-mail, CPF, CNPJ ou Aleatória)",
+        help_text="Chave PIX que será exibida para o cliente realizar o pagamento."
+    )
+    nome_titular = models.CharField(
+        max_length=100,
+        default="Supermercado Itatingax",
+        verbose_name="Nome do Titular/Recebedor",
+        help_text="Nome da conta que aparecerá no comprovante do cliente."
+    )
+    
+    # NEW: Novo campo para personalizar o texto da taxa
+    rotulo_taxa_pix = models.CharField(
+        max_length=100,
+        default="Taxa de Processamento Fiat (PIX)",
+        verbose_name="Rótulo / Nome da Taxa",
+        help_text="Texto que aparece antes do valor da taxa. Ex: Taxa de Processamento Fiat, Taxa de Submissão Estatal, Taxa de Conveniência"
+    )
+    
+    taxa_estatal_percentual = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=10.00,
+        verbose_name="Taxa da Operação Fiat (%)",
+        help_text="Porcentagem de taxa cobrada no checkout PIX (ex: 10.00 para +10%)."
+    )
+    instrucao_pagamento = models.TextField(
+        default="Envie o valor exato em Reais.",
+        verbose_name="Mensagem / Aviso do Modal",
+        help_text="Texto explicativo mostrado na parte inferior do modal PIX."
+    )
+
+    class Meta:
+        verbose_name = "Configuração do PIX"
+        verbose_name_plural = "Configuração do PIX"
+
+    def save(self, *args, **kwargs):
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def get_solo(cls):
+        obj, created = cls.objects.get_or_create(pk=1)
+        return obj
+
+    def __str__(self):
+        return f"Configuração PIX ({self.chave_pix})"
+
+
+# =========================================================================
+# CONFIGURAÇÃO DO TELEGRAM (NOTIFICAÇÕES DE CONTATO)
+# =========================================================================
+
+class ConfiguracaoTelegram(models.Model):
+    """Credenciais e textos do formulário de contato que envia via Telegram.
+
+    As credenciais também podem vir do .env (TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID),
+    que têm prioridade sobre o que estiver salvo aqui.
+    """
+    bot_token = models.CharField(
+        max_length=255,
+        blank=True,
+        verbose_name="Token do Bot (chave)",
+        help_text="Token do bot criado no @BotFather. Deixe em branco para usar o valor do .env."
+    )
+    chat_id = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name="Chat ID / Sessão (destino)",
+        help_text="ID da conversa que receberá as mensagens (ex.: 123456789). Deixe em branco para usar o valor do .env."
+    )
+    ativo = models.BooleanField(
+        default=True,
+        verbose_name="Exibir formulário de contato no rodapé"
+    )
+    titulo_form = models.CharField(
+        max_length=100,
+        default="Fale Conosco",
+        verbose_name="Título do formulário"
+    )
+    texto_botao = models.CharField(
+        max_length=50,
+        default="Enviar mensagem",
+        verbose_name="Texto do botão"
+    )
+    mensagem_sucesso = models.CharField(
+        max_length=200,
+        default="Mensagem enviada! Em breve entraremos em contato.",
+        verbose_name="Mensagem de sucesso"
+    )
+    mensagem_erro = models.CharField(
+        max_length=200,
+        default="Não foi possível enviar sua mensagem. Tente novamente.",
+        verbose_name="Mensagem de erro"
+    )
+
+    class Meta:
+        verbose_name = "Configuração do Telegram"
+        verbose_name_plural = "Configuração do Telegram"
+
+    def save(self, *args, **kwargs):
+        # Singleton: sempre edita a mesma linha (pk=1)
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def get_solo(cls):
+        obj, created = cls.objects.get_or_create(pk=1)
+        return obj
+
+    def __str__(self):
+        return "Configuração do Telegram (contato)"
+
+
+# =========================================================================
+# CONFIGURAÇÃO DO RODAPÉ (DADOS DA EMPRESA)
+# =========================================================================
+
+class ConfiguracaoRodape(models.Model):
+    """Dados da empresa exibidos no rodapé do site."""
+    descricao_curta = models.TextField(
+        blank=True,
+        verbose_name="Descrição curta da empresa"
+    )
+    telefone_principal = models.CharField(
+        max_length=30,
+        blank=True,
+        verbose_name="Telefone principal"
+    )
+    outros_telefones = models.CharField(
+        max_length=200,
+        blank=True,
+        verbose_name="Outros telefones de contato",
+        help_text="Separe por vírgula se houver mais de um."
+    )
+    email_contato = models.CharField(
+        max_length=150,
+        blank=True,
+        verbose_name="E-mail de contato"
+    )
+    endereco = models.CharField(
+        max_length=255,
+        blank=True,
+        verbose_name="Endereço"
+    )
+    site_principal = models.URLField(
+        max_length=255,
+        blank=True,
+        verbose_name="Site principal"
+    )
+    facebook_url = models.URLField(max_length=255, blank=True, verbose_name="Facebook")
+    instagram_url = models.URLField(max_length=255, blank=True, verbose_name="Instagram")
+    youtube_url = models.URLField(max_length=255, blank=True, verbose_name="YouTube")
+    x_url = models.URLField(max_length=255, blank=True, verbose_name="X (Twitter)")
+
+    class Meta:
+        verbose_name = "Configuração do Rodapé"
+        verbose_name_plural = "Configuração do Rodapé"
+
+    def save(self, *args, **kwargs):
+        # Singleton: sempre edita a mesma linha (pk=1)
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def get_solo(cls):
+        obj, created = cls.objects.get_or_create(pk=1)
+        return obj
+
+    def __str__(self):
+        return "Configuração do Rodapé"
+
+
+# =========================================================================
+# CONFIGURAÇÃO DO WHATSAPP (BOTÃO FLUTUANTE "CLICK-TO-CHAT")
+# =========================================================================
+
+class ConfiguracaoWhatsApp(models.Model):
+    """Configurações do botão flutuante de WhatsApp.
+
+    Cada campo tem prioridade no painel admin; quando vazio no banco, o
+    valor é lido como fallback das variáveis de ambiente WHATSAPP_ATIVO,
+    WHATSAPP_NUMERO e WHATSAPP_MENSAGEM_PADRAO definidas no .env.
+    """
+    ativo = models.BooleanField(
+        default=False,
+        verbose_name="Exibir botão flutuante",
+        help_text="Liga/desliga o botão no site.",
+    )
+    numero = models.CharField(
+        max_length=20,
+        blank=True,
+        verbose_name="Número (DDI + DDD + número)",
+        help_text="Somente dígitos, ex.: 5511999999999. Deixe em branco para usar o .env.",
+    )
+    mensagem_padrao = models.CharField(
+        max_length=200,
+        blank=True,
+        default="",
+        verbose_name="Mensagem padrão",
+        help_text="Texto enviado ao abrir a conversa. Deixe em branco para usar o .env ou o padrão 'Olá'.",
+    )
+
+    class Meta:
+        verbose_name = "Configuração do WhatsApp"
+        verbose_name_plural = "Configuração do WhatsApp"
+
+    def save(self, *args, **kwargs):
+        # Singleton: sempre edita a mesma linha (pk=1)
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def get_solo(cls):
+        obj, created = cls.objects.get_or_create(pk=1)
+        return obj
+
+    def __str__(self):
+        return "Configuração do WhatsApp (botão flutuante)"
+
+
+# =========================================================================
+# SERVIÇOS (ASSESSORIA / CONCIERGE)
+# =========================================================================
+
+class Servico(models.Model):
+    """Serviço ofertado na vitrine (ex.: assessoria/concierge).
+
+    Não entra no carrinho: o cliente demonstra interesse por uma mensagem
+    enviada via Telegram e/ou WhatsApp (canais configuráveis por serviço).
+    """
+    nome = models.CharField(max_length=255, verbose_name="Nome do serviço")
+    descricao = models.TextField(blank=True, null=True, verbose_name="Descrição do Serviço")
+    categoria = models.ForeignKey(
+        Categoria,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='servicos',
+        verbose_name="Categoria",
+    )
+    icone = models.CharField(
+        max_length=10,
+        blank=True,
+        null=True,
+        verbose_name="Ícone (emoji)",
+        help_text="Emoji exibido quando não há imagem (ex.: 🤝, 💼).",
+    )
+    imagem = models.ImageField(
+        upload_to="servicos/",
+        blank=True,
+        null=True,
+        verbose_name="Imagem do Serviço",
+    )
+    is_promo = models.BooleanField(
+        default=False,
+        verbose_name="Exibir nas Ofertas Rápidas (Home)",
+    )
+    whatsapp_ativo = models.BooleanField(
+        default=False,
+        verbose_name="Contato via WhatsApp",
+        help_text="Habilita o botão de envio por WhatsApp no card.",
+    )
+    telegram_ativo = models.BooleanField(
+        default=True,
+        verbose_name="Contato via Telegram",
+        help_text="Habilita o botão de envio por Telegram no card.",
+    )
+    mensagem_padrao = models.CharField(
+        max_length=500,
+        default="olá eu tenho interesse no serviço",
+        verbose_name="Mensagem padrão",
+        help_text="Texto pré-preenchido na caixa de interesse (editável pelo cliente).",
+    )
+
+    class Meta:
+        verbose_name = "Serviço"
+        verbose_name_plural = "Serviços"
+
+    def __str__(self):
+        return self.nome
+

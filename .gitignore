@@ -1,0 +1,15 @@
+venv/
+*.sqlite3
+*.db
+__pycache__/
+media/
+staticfiles/
+logs/
+logs.root-owned/
+.env
+client_secret_*.json
+.env
+criar_loja_8007.sh
+hexarcs_store/docker-compose.yml
+copydatabase.txt
+credentials.txt

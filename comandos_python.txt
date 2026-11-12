@@ -1,0 +1,19 @@
+# 1. Ativa o ambiente virtual primeiro
+source venv/bin/activate
+
+# 2. Gera e aplica as migrações do banco
+python manage.py makemigrations
+python manage.py migrate
+
+# 3. Coleta os arquivos estáticos para o Nginx/Gunicorn
+python manage.py collectstatic --noinput
+
+# 4. Desativa a venv (opcional, mas recomendado)
+deactivate
+
+# 5. Reinicia o serviço no systemd para carregar o novo settings.py
+sudo systemctl restart supermercado.service
+
+
+####alias###
+recompilar_sup

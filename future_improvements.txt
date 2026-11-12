@@ -1,0 +1,142 @@
+# Future Improvements / Known Quirks to Fix
+
+Notes from a full code read-through. These are NOT urgent for the store to work, but
+they should be corrected before the project grows or goes fully public. Items are
+grouped by type; "impact" is a rough severity hint (High/Med/Low).
+
+Primary language: English. Code comments/templates remain in pt-BR.
+
+
+=============================================================================
+1. CORRECTNESS BUGS / DEAD CODE
+=============================================================================
+
+[High] Category URL collision — core/urls.py
+  - Two patterns both use name='categoria_detalhe':
+        path('categoria/<str:nome>/', views.categoria_detalhe, name='categoria_detalhe')
+        path('categoria/<slug:slug>/', views.detalhe_categoria, name='categoria_detalhe')
+  - Because Django matches in order and `str` matches any single path segment, the
+    first pattern always wins. `views.detalhe_categoria` is unreachable for these URLs.
+  - Decide on ONE category concept (Categoria vs CategoriaCard) and remove the other,
+    or give the views distinct names/URLs.
+
+[High] Broken FK assumption in detalhe_categoria — core/views.py
+  - `detalhe_categoria` does `Produto.objects.filter(categoria=categoria)` where
+    `categoria` is a CategoriaCard, but Produto.categoria is a FK to Categoria.
+  - This would raise on evaluation. It is currently masked only because the URL is
+    shadowed (see above). Fix alongside the URL collision.
+
+[Med] Duplicate KixCart class — core/cart.py (active) vs core/core.py (dead)
+  - views.py imports `from .cart import KixCart`. core/core.py is an older copy with a
+    different remove() signature and no get_summary()/get_items()/__iter__().
+  - Delete core/core.py (or merge) to avoid future confusion.
+
+[Med] Hardcoded PIX key in client JS — core/static/js/script.js
+  - In the PIX checkout branch, the QR is generated with `qrcode.addData('SUA_CHAVE_PIX_AQUI')`
+    (hardcoded), while the template also renders a qrserver.com image using
+    pix_config.chave_pix.
+  - Make the client-generated QR use the admin-configured key (ConfiguracaoPix) or rely
+    solely on the server-rendered QR. Remove the hardcoded e-mail.
+
+[Low] MacroCategoria is defined but not rendered
+  - core/models.py defines MacroCategoria ("Navegue pelas Macro Categorias" section),
+    but templates/index.html renders CategoriaCard tiles instead. Decide whether
+    MacroCategoria should be wired in or removed.
+
+[Low] COINAPI_KEY left over
+  - .env / deploy.sh / instrucoes_baremetal.txt still define COINAPI_KEY, but views.home
+    now fetches the BTC/BRL rate from Binance. The commented-out CoinAPI block in
+    views.py is dead. Remove COINAPI_KEY references or re-enable CoinAPI as a fallback.
+
+[Low] Legacy DB file at repo root
+  - settings.py uses BASE_DIR/'data'/'db.sqlite3', but a db.sqlite3 also exists at the
+    repo root. Remove the root copy to avoid confusion about which DB is live.
+
+
+=============================================================================
+2. SECURITY
+=============================================================================
+
+[High] Secrets present in tracked helper files
+  - instrucoes_baremetal.txt, comandos_python.txt, core/comandos.txt,
+    docker_comandos.txt, restaurar_backup.txt contain real API keys, a Telegram bot
+    token, SSH key paths and server IPs.
+  - Rotate any leaked credentials, remove the values from these files, and add the
+    files to .gitignore (or delete them). Prefer placeholders.
+
+[High] deploy.sh hardcodes a default admin password
+  - deploy.sh writes DJANGO_SUPERUSER_PASSWORD=SUA_SENHA_SEGURA_AQUI into docker-compose.yml and
+    uses it as the fallback in entrypoint.sh. Replace with a required env var / secret.
+
+[Med] Permissive production defaults
+  - deploy.sh/entrypoint.sh inject ALLOWED_HOSTS=['*'], CSRF_TRUSTED_ORIGINS=['https://*',
+    'http://*'], CSRF_COOKIE_SECURE=False. Fine for onboarding, unsafe in production.
+  - Move to explicit domain lists and CSRF_COOKIE_SECURE=True for HTTPS-only deploys.
+
+[Med] Insecure SECRET_KEY fallback
+  - settings.py falls back to 'django-insecure-fallback-local-key'. Fail loudly in
+    production if SECRET_KEY is missing instead of silently using a known value.
+
+[Low] client_secret_*.json (Google) is in the working tree
+  - It is git-ignored, but confirm it is not already tracked by history; keep it out of
+    the repo and use a secret store.
+
+
+=============================================================================
+3. CODE CLEANUP / CONSOLIDATION
+=============================================================================
+
+[Low] settings.py has leftover commented-out Allauth config and duplicate `import os`
+  - Remove the commented ACCOUNT_LOGIN_METHODS / ACCOUNT_SIGNUP_FIELDS block and the
+    duplicated `import os` / duplicated static-files comment block for clarity.
+
+[Low] context_processors.py has duplicate imports
+  - `from .models import SiteConfig` appears twice, and imports are scattered mid-file.
+    Consolidate into one import block.
+
+[Low] Logging dirs duplicated
+  - logs/ and logs.root-owned/ both exist; settings.py writes logs/app.log and falls
+    back to console-only if the dir is not writable. Remove logs.root-owned/ and keep a
+    single, consistently-owned logs/ dir.
+
+[Low] Dockerfile runs runserver, not gunicorn
+  - requirements.txt includes gunicorn, and the project is gunicorn-ready (core.wsgi).
+    For production, switch the container CMD to gunicorn behind a reverse proxy.
+
+
+=============================================================================
+4. REPO HYGIENE
+=============================================================================
+
+[Low] Stray files that don't belong in the repo
+  - imagem.bmp, django.log (root), core/static/js/django.log, templates/django.log,
+    .docker-compose.yml.swp, core/rawmaterial/*.jpg (unused sample photos?).
+  - Verify and remove the ones that are committed but not needed; keep media/ out of
+    git (already ignored).
+
+[Low] psycopg2-binary in requirements but SQLite is used
+  - Either remove it (to slim the image) or document that Postgres is a supported
+    alternative. Installing libpq-dev + psycopg2 for a SQLite app is wasted weight.
+
+
+=============================================================================
+5. FEATURE / UX GAPS (optional)
+=============================================================================
+
+[Low] No order persistence / stock management
+  - Checkout creates a Lightning invoice and clears the cart on payment, but no Order
+    model records what was sold. Add an Order/OrderItem model if you need sales history.
+
+[Low] No delivery-fee / minimum-order logic
+  - The cart totals sats only; no shipping or minimums. Consider a configurable fee.
+
+[Low] PIX path is client-side only
+  - PIX totals are computed in JS; there is no server-side invoice/verification for PIX.
+    For trust, move the PIX total calculation server-side.
+
+[Low] Telegram contact is "best-effort" by design (returns success even on failure)
+  - Intentional, but a queue/retry or DB-backed outbox would make contact reliable.
+
+[Low] i18n is minimal
+  - LANGUAGE_CODE='pt-br'; UI strings are hardcoded in templates/JS. Consider
+    {% trans %} / a translation workflow if a second storefront language is needed.
