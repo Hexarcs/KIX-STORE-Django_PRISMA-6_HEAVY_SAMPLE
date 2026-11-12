@@ -13,3 +13,6 @@ criar_loja_8007.sh
 hexarcs_store/docker-compose.yml
 copydatabase.txt
 credentials.txt
+*.log
+*.swp
+imagem.bmp
