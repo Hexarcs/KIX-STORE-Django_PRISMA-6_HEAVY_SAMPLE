@@ -6,13 +6,21 @@ media/
 staticfiles/
 logs/
 logs.root-owned/
+
+# Credenciais e segredos (nunca versionar)
 .env
+credentials.txt
 client_secret_*.json
-.env
 criar_loja_8007.sh
+deploy.txt
+entrypoint.sh
+restaurar_backup.txt
+instrucoes_baremetal.txt
+GIT_COMMIT.TXT
+comandos_python.txt
+
 hexarcs_store/docker-compose.yml
 copydatabase.txt
-credentials.txt
 *.log
 *.swp
 imagem.bmp

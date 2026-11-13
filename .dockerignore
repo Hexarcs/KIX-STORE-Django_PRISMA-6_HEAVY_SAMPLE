@@ -5,7 +5,29 @@ __pycache__/
 .Python
 env/
 venv/
-.env
-db.sqlite3
 .git/
 .gitignore
+
+# Credenciais e segredos (nunca entrar na imagem)
+.env
+credentials.txt
+client_secret_*.json
+criar_loja_8007.sh
+deploy.txt
+entrypoint.sh
+restaurar_backup.txt
+instrucoes_baremetal.txt
+GIT_COMMIT.TXT
+comandos_python.txt
+copydatabase.txt
+
+# Dados de runtime / banco
+db.sqlite3
+*.sqlite3
+*.db
+data/
+media/
+staticfiles/
+logs/
+*.log
+*.swp

@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>{% block head_title %}{% endblock head_title %}</title>
+        {% block extra_head %}{% endblock extra_head %}
+        <style>
+            * { box-sizing: border-box; }
+            html, body { margin: 0; padding: 0; }
+            body {
+                font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+                background-color: #f4f5f7;
+                color: #1f2937;
+                min-height: 100vh;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                padding: 32px 16px;
+            }
+            .auth-shell { width: 100%; max-width: 420px; }
+            .auth-logo { text-align: center; margin-bottom: 22px; }
+            .auth-logo img { max-height: 64px; width: auto; object-fit: contain; }
+            .auth-logo-text { font-size: 22px; font-weight: 700; }
+            .auth-messages { margin-bottom: 14px; }
+            .auth-messages .alert {
+                padding: 11px 14px;
+                border-radius: 8px;
+                font-size: 14px;
+                margin-bottom: 8px;
+                border: 1px solid transparent;
+                line-height: 1.45;
+            }
+            .auth-messages ul { margin: 0; padding-left: 18px; }
+            .alert-success { background: #dcfce7; border-color: #bbf7d0; color: #166534; }
+            .alert-error { background: #fee2e2; border-color: #fecaca; color: #991b1b; }
+            .alert-danger { background: #fee2e2; border-color: #fecaca; color: #991b1b; }
+            .alert-warning { background: #fef9c3; border-color: #fde68a; color: #854d0e; }
+            .alert-info { background: #e0f2fe; border-color: #bae6fd; color: #075985; }
+            .auth-card {
+                background: #ffffff;
+                border: 1px solid #e5e7eb;
+                border-radius: 12px;
+                padding: 28px;
+                box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05);
+            }
+            .auth-card h1 { margin: 0 0 18px; font-size: 23px; text-align: center; line-height: 1.3; }
+            .auth-card p { color: #4b5563; line-height: 1.55; }
+            .auth-card label { display: block; font-size: 13px; font-weight: 600; margin: 12px 0 4px; color: #374151; }
+            .auth-card input[type="text"],
+            .auth-card input[type="email"],
+            .auth-card input[type="password"],
+            .auth-card input[type="number"] {
+                width: 100%;
+                padding: 10px 12px;
+                border: 1px solid #d1d5db;
+                border-radius: 8px;
+                font-size: 15px;
+                margin-bottom: 4px;
+                background: #fff;
+            }
+            .auth-card input:focus {
+                outline: none;
+                border-color: #2563eb;
+                box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+            }
+            .auth-card button,
+            .auth-card .btn {
+                display: block;
+                width: 100%;
+                padding: 11px 16px;
+                background-color: #2563eb;
+                color: #fff;
+                border: none;
+                border-radius: 8px;
+                font-size: 15px;
+                font-weight: 600;
+                cursor: pointer;
+                text-align: center;
+                text-decoration: none;
+                margin-top: 14px;
+            }
+            .auth-card button:hover { background-color: #1d4ed8; }
+            .auth-card button.link {
+                background: transparent;
+                color: #2563eb;
+                font-weight: 500;
+                margin-top: 8px;
+                box-shadow: none;
+            }
+            .auth-card a { color: #2563eb; text-decoration: none; }
+            .auth-card a:hover { text-decoration: underline; }
+            .auth-back { text-align: center; margin-top: 18px; font-size: 14px; }
+            .auth-back a { color: #6b7280; text-decoration: none; }
+            .auth-back a:hover { text-decoration: underline; }
+        </style>
+    </head>
+    <body>
+        <div class="auth-shell">
+            <div class="auth-logo">
+                {% if site_config.logo %}
+                    <img src="{{ site_config.logo.url }}" alt="{{ site_config.nome_loja }}">
+                {% else %}
+                    <div class="auth-logo-text">{{ site_config.nome_loja }}</div>
+                {% endif %}
+            </div>
+
+            {% if messages %}
+                <div class="auth-messages">
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags|default:'info' }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <div class="auth-card">
+                {% block content %}{% endblock content %}
+            </div>
+
+            <div class="auth-back">
+                <a href="/">← Voltar à loja / Back to store</a>
+            </div>
+        </div>
+        {% block extra_body %}{% endblock extra_body %}
+    </body>
+</html>

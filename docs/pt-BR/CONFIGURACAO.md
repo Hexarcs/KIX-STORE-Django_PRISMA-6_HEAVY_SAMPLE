@@ -74,6 +74,22 @@ WHATSAPP_NUMERO=5531999999999
 WHATSAPP_MENSAGEM_PADRAO=Olá
 ```
 
+### 3.1. Criando o bot no Telegram (BotFather)
+
+O formulário de contato precisa de um token de bot e do chat ID que receberá as
+mensagens. Para criá-los:
+
+1. Abra o Telegram e converse com o **@BotFather** (o bot oficial).
+2. Envie `/newbot` e siga as instruções para escolher um nome de exibição e um
+   username (o username precisa terminar em `bot`).
+3. O BotFather responde com um token no formato `123456789:AAF...` — copie-o para
+   `TELEGRAM_BOT_TOKEN`.
+4. Para obter o `TELEGRAM_CHAT_ID`:
+   - mande uma mensagem para o **@userinfobot** (ou envie `/start` ao seu novo bot), ou
+   - envie qualquer mensagem ao seu bot e abra
+     `https://api.telegram.org/bot<TOKEN>/getUpdates` para copiar o campo `chat.id`.
+   Cole esse número em `TELEGRAM_CHAT_ID`.
+
 ## 4. Precedência de credenciais (env vs. admin)
 
 Algumas configurações podem ser definidas no `.env` **ou** no Django admin. As regras:
@@ -118,15 +134,24 @@ Outras seções do admin gerenciam dados de catálogo:
   `core/urls.py`, pois o WhiteNoise não cobre mídia. Isso é intencional para
   implantações pequenas; para escala, coloque a mídia em object storage/CDN.
 
-## 7. Opcional: OAuth do Google
+## 7. Opcional: login social do Google
 
-O login do Google já vem habilitado via `allauth.socialaccount.providers.google`. Para
-ativar:
+O login do Google já vem habilitado via `allauth.socialaccount.providers.google`, mas
+você precisa de credenciais OAuth do Google para usá-lo. Abra o
+[Google Cloud Console](https://console.cloud.google.com/) e:
 
-1. Crie credenciais OAuth no Google Cloud Console.
-2. Em `/admin/`, em **Social Applications**, adicione o provedor "Google" com seu
+1. Crie (ou selecione) um projeto.
+2. Configure a **tela de consentimento OAuth** (APIs e serviços → Tela de consentimento OAuth).
+3. Vá em **APIs e serviços → Credenciais → Criar credenciais → ID do cliente OAuth**.
+4. Escolha **Aplicativo da Web** e adicione o URI de redirecionamento autorizado
+   `https://<seu-dominio>/accounts/google/login/callback/`.
+5. Baixe o `client_secret_*.json` e coloque na raiz do projeto.
+
+Depois habilite no Django:
+
+6. Em `/admin/`, em **Social Applications**, adicione o provedor "Google" com seu
    client ID/secret e anexe-o ao site (`SITE_ID=1`).
-3. O arquivo `client_secret_*.json` no repositório é um exemplo e é ignorado pelo git.
+7. O arquivo `client_secret_*.json` no repositório é um exemplo e é ignorado pelo git.
 
 O login local por usuário/e-mail funciona de imediato
 (`ACCOUNT_ALLOW_REGISTRATION=True`, `ACCOUNT_EMAIL_VERIFICATION='none'`).

@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# deploy.example.sh — MODELO SANITIZADO (seguro para versionar).
+# A versão real (com credenciais) é mantida localmente como `deploy.txt`,
+# fora do git/docker e sem permissão de execução. Para reproduzir o deploy
+# em outra máquina, copie este modelo e preencha as credenciais manualmente.
+
 set -e
 
 echo "=============================================="
