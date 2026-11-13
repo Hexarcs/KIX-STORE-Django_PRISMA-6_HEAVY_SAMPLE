@@ -51,6 +51,7 @@ contact channels — is editable from the Django admin, no code changes needed.
 
 - [Architecture](docs/ARCHITECTURE.md) — components, data flow, payment flows, KIX mapping
 - [Setup & configuration](docs/SETUP.md) — local development and all settings/env vars
+- [Prerequisites](docs/PREREQUISITES.md) — install Git & Docker before deploying
 - [Deployment](docs/DEPLOYMENT.md) — Docker, `deploy.sh`, bare-metal
 - [API reference](docs/API.md) — every URL/endpoint
 - [Data model](docs/DATA_MODEL.md) — all Django models and admin singletons

@@ -6,6 +6,10 @@ A KIX Store suporta dois estilos de implantação: **Docker** (recomendado) e
 **bare-metal** (venv + Gunicorn/systemd). Esta página cobre ambos e termina com um
 checklist de segurança.
 
+> ⚙️ **Antes de começar** — certifique-se de ter o **Git** e o **Docker** instalados e de
+> ter clonado este repositório. Veja **[Pré-requisitos](PREREQUISITOS.md)** para um guia
+> passo a passo (Git, Docker Engine + Compose e clonagem/build da imagem).
+
 ## 1. Docker
 
 ### 1.1 A imagem
@@ -80,7 +84,18 @@ Um reverse proxy (Nginx/Caddy) deve terminar o HTTPS, encaminhar ao Gunicorn e s
 `settings.py`/`entrypoint.sh` habilitam `USE_X_FORWARDED_HOST` e
 `SECURE_PROXY_SSL_HEADER`.
 
-## 3. Persistência de banco e mídia
+## 3. Acessando a loja
+
+- **Localmente** — abra `http://localhost:8006` no navegador. `8006` é a porta do host
+  usada pelo fluxo do `deploy.sh` (o `docker-compose.yml` do próprio repositório usa
+  `8003`).
+- **Web pública** — rode a loja em uma **VPS** e coloque um reverse proxy (**Nginx** ou
+  **Apache**) na frente. O proxy termina o HTTPS e encaminha as requisições para a
+  porta local (`8006`).
+- **Tor** — mesma ideia: configure um serviço oculto do Tor cujo alvo aponte para a
+  porta local (`8006`), e a loja fica acessível pelo endereço `.onion`.
+
+## 4. Persistência de banco e mídia
 
 - O SQLite vive em `data/db.sqlite3` (veja `DATABASES` em `core/settings.py`).
 - A mídia enviada vive em `media/`.
@@ -89,7 +104,7 @@ Um reverse proxy (Nginx/Caddy) deve terminar o HTTPS, encaminhar ao Gunicorn e s
 - O `requirements.txt` inclui `psycopg2-binary` embora as configurações atuais usem
   SQLite — migrar para PostgreSQL exige apenas editar `DATABASES`.
 
-## 4. Checklist de segurança
+## 5. Checklist de segurança
 
 Os padrões entregues favorecem uma primeira execução rápida em detrimento da
 segurança. Antes de qualquer exposição pública:
@@ -109,7 +124,7 @@ segurança. Antes de qualquer exposição pública:
 - [ ] Mantenha o nó LNbits atrás de autenticação; a chave de API da loja concede
       acesso de criação/leitura de invoices.
 
-## 5. Operações comuns
+## 6. Operações comuns
 
 ```bash
 docker compose logs -f            # acompanha logs

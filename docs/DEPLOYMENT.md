@@ -6,6 +6,10 @@ The KIX Store supports two deployment styles: **Docker** (recommended) and
 **bare-metal** (venv + Gunicorn/systemd). This page covers both and ends with a
 security checklist.
 
+> ⚙️ **Before you start** — make sure **Git** and **Docker** are installed and that you
+> have cloned this repository. See **[Prerequisites](PREREQUISITES.md)** for a
+> step-by-step guide (Git, Docker Engine + Compose, and cloning/building the image).
+
 ## 1. Docker
 
 ### 1.1 The image
@@ -78,7 +82,17 @@ A reverse proxy (Nginx/Caddy) should terminate HTTPS, forward to Gunicorn, and s
 `settings.py`/`entrypoint.sh` enable `USE_X_FORWARDED_HOST` and
 `SECURE_PROXY_SSL_HEADER`.
 
-## 3. Database & media persistence
+## 3. Accessing the store
+
+- **Locally** — open `http://localhost:8006` in your browser. `8006` is the host port
+  used by the `deploy.sh` flow (the repo's own `docker-compose.yml` maps `8003`).
+- **Public web** — run the store on a **VPS** and put a reverse proxy (**Nginx** or
+  **Apache**) in front of it. The proxy terminates HTTPS and forwards requests to the
+  local port (`8006`).
+- **Tor** — same idea: configure a Tor hidden service whose target points at the local
+  port (`8006`), and the store is reachable through its `.onion` address.
+
+## 4. Database & media persistence
 
 - SQLite lives at `data/db.sqlite3` (see `DATABASES` in `core/settings.py`).
 - Uploaded media lives in `media/`.
@@ -87,7 +101,7 @@ A reverse proxy (Nginx/Caddy) should terminate HTTPS, forward to Gunicorn, and s
 - `requirements.txt` includes `psycopg2-binary` although the current settings use
   SQLite — switching to PostgreSQL only requires editing `DATABASES`.
 
-## 4. Security checklist
+## 5. Security checklist
 
 The shipped defaults favor a fast first run over security. Before any public
 exposure:
@@ -107,7 +121,7 @@ exposure:
 - [ ] Keep the LNbits node behind authentication; the store's API key grants invoice
       creation/read access.
 
-## 5. Common operations
+## 6. Common operations
 
 ```bash
 docker compose logs -f            # follow logs

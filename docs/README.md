@@ -9,6 +9,7 @@ Primary language is English; every page has a Portuguese (pt-BR) counterpart.
 |-------|---------|-----------|
 | Architecture | [ARCHITECTURE.md](ARCHITECTURE.md) | [ARQUITETURA.md](pt-BR/ARQUITETURA.md) |
 | Setup & configuration | [SETUP.md](SETUP.md) | [CONFIGURACAO.md](pt-BR/CONFIGURACAO.md) |
+| Prerequisites (Git & Docker) | [PREREQUISITES.md](PREREQUISITES.md) | [PREREQUISITOS.md](pt-BR/PREREQUISITOS.md) |
 | Deployment | [DEPLOYMENT.md](DEPLOYMENT.md) | [IMPLANTACAO.md](pt-BR/IMPLANTACAO.md) |
 | API reference | [API.md](API.md) | [API.md](pt-BR/API.md) |
 | Data model | [DATA_MODEL.md](DATA_MODEL.md) | [MODELO_DE_DADOS.md](pt-BR/MODELO_DE_DADOS.md) |
@@ -20,8 +21,9 @@ Primary language is English; every page has a Portuguese (pt-BR) counterpart.
 2. **Setup & configuration** — run it locally and understand every setting.
 3. **Data model** — learn the Django models and the admin singletons.
 4. **API reference** — see every route and what it returns.
-5. **Deployment** — ship it with Docker or bare-metal.
-6. **KIX protocol context** — map the store onto the PRISMA layers.
+5. **Prerequisites** — install Git and Docker before deploying.
+6. **Deployment** — ship it with Docker or bare-metal.
+7. **KIX protocol context** — map the store onto the PRISMA layers.
 
 ## Maintenance
 

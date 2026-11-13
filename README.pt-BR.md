@@ -52,6 +52,7 @@ de contato — é editável pelo Django admin, sem alterar código.
 
 - [Arquitetura](docs/pt-BR/ARQUITETURA.md) — componentes, fluxo de dados, pagamentos, mapeamento KIX
 - [Configuração](docs/pt-BR/CONFIGURACAO.md) — desenvolvimento local e todas as variáveis
+- [Pré-requisitos](docs/pt-BR/PREREQUISITOS.md) — instale Git e Docker antes de implantar
 - [Implantação](docs/pt-BR/IMPLANTACAO.md) — Docker, `deploy.sh`, bare-metal
 - [Referência da API](docs/pt-BR/API.md) — todas as rotas/endpoints
 - [Modelo de dados](docs/pt-BR/MODELO_DE_DADOS.md) — todos os models e singletons do admin
